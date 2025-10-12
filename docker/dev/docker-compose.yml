@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  openadr-web:
+    image: nginx
+    container_name: openadr-web
+    depends_on:
+      - openadr-vtn
+    ports:
+      - "443:443"
+    volumes:
+      - ./web/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./web:/etc/nginx/certs:ro
+
+  openadr-vtn:
+    build:
+      context: .
+      dockerfile: dockerfile.vtn
+    container_name: openadr-vtn
+    volumes:
+      - ../../vtn/:/workspaces
+    command: sleep infinity
+    expose:
+      - "8080"
+
+  openadr-ven:
+    build:
+      context: .
+      dockerfile: dockerfile.ven
+    container_name: openadr-ven
+    volumes:
+      - ../../ven/:/workspaces
+      - ./web://certs:ro
+    command: sleep infinity
+    depends_on:
+      - openadr-web
+    environment:
+      - VTN_URL=https://openadr-web:443/OpenADR2/Simple/2.0b
+      - CERT_FILE=/certs/dummy_ven.crt
+      - KEY_FILE=/certs/dummy_ven.key
+      - CA_FILE=/certs/dummy_ca.crt
+
+  dynamodb:
+    image: amazon/dynamodb-local
+    container_name: openadr-dynamodb-local
+    ports:
+      - "8000:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb"]
+
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin
+    container_name: openadr-dynamodb-admin
+    ports:
+      - "8001:8001"
+    environment:
+      DYNAMO_ENDPOINT: http://dynamodb:8000
+    depends_on:
+      - dynamodb

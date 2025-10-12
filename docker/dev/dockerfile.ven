@@ -1,0 +1,4 @@
+FROM python:3.11
+
+# install python package
+RUN pip install poetry
