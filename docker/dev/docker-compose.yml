@@ -2,14 +2,16 @@ version: "3.9"
 
 services:
   openadr-web:
-    image: nginx
+    build: 
+      context: .
+      dockerfile: dockerfile.web
     container_name: openadr-web
     depends_on:
       - openadr-vtn
     ports:
       - "443:443"
     volumes:
-      - ./web/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./web/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
       - ./web:/etc/nginx/certs:ro
 
   openadr-vtn:

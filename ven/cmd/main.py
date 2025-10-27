@@ -22,6 +22,7 @@ async def handle_event(event):
     return "optIn"
 
 client = OpenADRClient(
+    ven_id="ven_001",
     ven_name="ven123",
     vtn_url=VTN_URL,
     cert=CERT_FILE,

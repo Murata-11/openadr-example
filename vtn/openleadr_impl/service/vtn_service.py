@@ -1,18 +1,17 @@
 from http import HTTPStatus
 import logging
 import traceback
-import hashlib
 
-from urllib.parse import unquote
 from aiohttp import web
 from lxml.etree import XMLSyntaxError
 from signxml.exceptions import InvalidSignature
-from cryptography import x509
-from cryptography.hazmat.primitives.serialization import Encoding
 
 from openleadr import errors, hooks, utils
-from openleadr.messaging import validate_xml_schema, parse_message, authenticate_message
+from openleadr.messaging import validate_xml_schema, parse_message
 from openleadr.service import VTNService
+
+from openleadr_impl.utils import utils as myUtils
+from openleadr_impl.messaging import authenticate_message
 
 logger = logging.getLogger("openleadr")
 
@@ -29,8 +28,8 @@ class MyVTNService(VTNService):
             content_type = request.headers.get("content-type", "")
             if not content_type.lower().startswith("application/xml"):
                 raise errors.HTTPError(
-                    response_code=HTTPStatus.BAD_REQUEST,
-                    response_description="The Content-Type header must be application/xml; "
+                    status=HTTPStatus.BAD_REQUEST,
+                    description="The Content-Type header must be application/xml; "
                     f"you provided {request.headers.get('content-type', '')}",
                 )
             content = await request.read()
@@ -76,7 +75,6 @@ class MyVTNService(VTNService):
                         message_tree,
                         message_payload,
                         fingerprint_lookup=self.fingerprint_lookup,
-                        verify_message_signature=self.verify_message_signatures,
                     )
                 elif hasattr(self, "ven_lookup"):
                     await authenticate_message(
@@ -84,7 +82,6 @@ class MyVTNService(VTNService):
                         message_tree,
                         message_payload,
                         ven_lookup=self.ven_lookup,
-                        verify_message_signature=self.verify_message_signatures,
                     )
                 else:
                     logger.error(
@@ -96,10 +93,13 @@ class MyVTNService(VTNService):
             # Pass the message off to the handler and get the response type and payload
             try:
                 # Add the request fingerprint to the message so that the handler can check for it.
-                if message_type == "oadrCreatePartyRegistration":
-                    # message_payload['fingerprint'] = utils.get_cert_fingerprint_from_request(request)
-                    message_payload['fingerprint'] = self.aa(request)
-                    print(message_payload['fingerprint'])
+                if message_type in (
+                    "oadrCreatePartyRegistration",
+                    "oadrQueryRegistration",
+                ):
+                    message_payload["fingerprint"] = (
+                        myUtils.get_certificate_fingerprint_from_alb_header(request)
+                    )
                 response_type, response_payload = await self.handle_message(
                     message_type, message_payload
                 )
@@ -173,23 +173,3 @@ class MyVTNService(VTNService):
             )
         hooks.call("before_respond", response.text)
         return response
-
-    def aa(self, request):
-        leaf_enc = request.headers.get("X-Amzn-Mtls-Clientcert-Leaf")
-        if not leaf_enc:
-            return web.Response(text="no client cert", status=400)
-
-        # 1) URLデコード → PEMテキスト
-        leaf_pem = unquote(leaf_enc).encode("utf-8")
-
-        # 2) PEMを読み込んでDERに
-        cert = x509.load_pem_x509_certificate(leaf_pem)
-        der = cert.public_bytes(Encoding.DER)
-
-        # 3) 指紋を計算
-        return self.certificate_fingerprint_from_der(der)
-
-    def certificate_fingerprint_from_der(self, der_bytes: bytes) -> str:
-        """X.509 DER の SHA-256 フィンガープリントを 'AA:BB:...' 形式で返す"""
-        h = hashlib.sha256(der_bytes).digest()
-        return ":".join(f"{b:02X}" for b in h)

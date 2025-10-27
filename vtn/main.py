@@ -13,7 +13,7 @@ enable_default_logging()
 
 async def on_create_party_registration(info):
     if info["ven_name"] == "ven123":
-        return "ven_id_123", "reg_id_123"  # 最小実装：固定値でOK（まずは動かす）
+        return "ven_001", "reg_id_123"  # 最小実装：固定値でOK（まずは動かす）
     return False
 
 
@@ -110,6 +110,15 @@ async def on_register_report(report: dict):
     return results
 
 
+def ven_lookup(ven_id):
+    return {
+        "ven_id": "ven_001",
+        "ven_name": "ven123",
+        "fingerprint": "53:A4:8E:9C:E0:E1:F5:E4:19:28:2E:20:CB:56:92:D2:FF:CD:18:9A:78:1F:20:11:C9:27:8B:43:3F:4D:4A:CF",
+        "registration_id": "reg_id_123",
+    }
+
+
 # ---- 実際の更新受信 ----
 
 
@@ -148,13 +157,15 @@ async def on_event_response(ven_id, event_id, opt_type):
     print(f"[EVENT-RESP] ven={ven_id} event={event_id} opt={opt_type}")
 
 
-server = MyOpenADRServer(vtn_id="myvtn", http_host="0.0.0.0", http_port="8080")
+server = MyOpenADRServer(
+    vtn_id="myvtn", http_host="0.0.0.0", http_port="8080", ven_lookup=ven_lookup
+)
 server.add_handler("on_create_party_registration", on_create_party_registration)
 server.add_handler("on_register_report", on_register_report)
 
 # 起動直後に拾われるイベントを1つ用意（開始=今から60秒後）
 server.add_event(
-    ven_id="ven_id_123",
+    ven_id="ven_001",
     signal_name="simple",
     signal_type="level",
     intervals=[
