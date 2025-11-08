@@ -1,135 +1,339 @@
-import asyncio
 from http import HTTPStatus
-from aiohttp.test_utils import make_mocked_request
-from aiohttp import web
+from unittest.mock import AsyncMock, Mock
 import pytest
+from lxml.etree import XMLSyntaxError
 
+from openleadr import errors
+
+from openleadr_impl.service import vtn_service
 from openleadr_impl.service.vtn_service import MyVTNService
 
-pytest_plugins = ("aiohttp.pytest_plugin",)
+
+class DummyRequest:
+    def __init__(self, headers, body=b""):
+        self.headers = headers
+        self._body = body
+
+    async def read(self):
+        return self._body
 
 
-@pytest.fixture
-def imports_monkeypatch(monkeypatch):
-    """
-    MyVTNService モジュール内の外部依存を差し替える
-    """
-    import openleadr_impl.service.vtn_service as m
+class TestMyVTNServiceHandler:
+    @pytest.mark.asyncio
+    async def test_handler_rejects_non_xml_content_type(self):
+        service = MyVTNService(vtn_id="test-vtn")
 
-    class _Hooks:
-        @staticmethod
-        def call(*args, **kwargs):
-            return None
+        # server.pyで注入されるペイロード作成関数をモック化
+        service._create_message = lambda *_args, **_kwargs: "<xml/>"
+        request = DummyRequest(headers={"content-type": "text/plain"})
 
-    monkeypatch.setattr(m, "hooks", _Hooks(), raising=False)
+        response = await service.handler(request)
 
-    monkeypatch.setattr(
-        m, "validate_xml_schema", lambda content: "<ok/>", raising=False
-    )
+        assert response.status == HTTPStatus.BAD_REQUEST
+        assert "application/xml" in response.text
 
-    async def _auth(*args, **kwargs):
-        return None
+    @pytest.mark.asyncio
+    async def test_handler_xml_failed_validation(self, monkeypatch):
+        service = MyVTNService(vtn_id="test-vtn")
+        request = DummyRequest(
+            headers={"content-type": "application/xml"}, body=b"<bad/>"
+        )
 
-    monkeypatch.setattr(m, "authenticate_message", _auth, raising=False)
+        def raise_xml_error(_content):
+            raise XMLSyntaxError("Invalid XML", 0, 0, 0)
 
-    def _parse_message(content):
-        return "oadrQueryRegistration", {
-            "request_id": "req-1",
-            "ven_id": "ven-1",
-            "vtn_id": "VTN-X",
-        }
+        parse_mock = Mock()
 
-    monkeypatch.setattr(m, "parse_message", _parse_message, raising=False)
+        monkeypatch.setattr(vtn_service, "validate_xml_schema", raise_xml_error)
+        monkeypatch.setattr(vtn_service, "parse_message", parse_mock)
 
-    class _Utils:
-        @staticmethod
-        async def await_if_required(x):
-            if asyncio.iscoroutine(x):
-                return await x
-            return x
+        response = await service.handler(request)
 
-    monkeypatch.setattr(m, "utils", _Utils, raising=False)
+        assert response.status == HTTPStatus.BAD_REQUEST
+        assert "XML failed validation" in response.text
+        parse_mock.assert_not_called()
 
-    class _MyUtils:
-        @staticmethod
-        def get_certificate_fingerprint_from_alb_header(request):
-            return "fp:ALB"
+    @pytest.mark.asyncio
+    async def test_handler_fingerprintMismatch(self, monkeypatch):
+        service = MyVTNService(vtn_id="test-vtn")
+        service._create_message = lambda *_args, **_kwargs: "<xml/>"
+        service.handle_message = AsyncMock()
+        service.ven_lookup = AsyncMock(return_value={"registration_id": "reg-1"})
 
-    monkeypatch.setattr(m, "myUtils", _MyUtils, raising=False)
+        request = DummyRequest(
+            headers={"content-type": "application/xml"}, body=b"<oadr/>"
+        )
 
-    return m
+        monkeypatch.setattr(
+            vtn_service, "validate_xml_schema", lambda _content: "mocked-tree"
+        )
+        monkeypatch.setattr(
+            vtn_service, "parse_message", lambda _content: ("oadrPoll", {"ven_id": "ven-123"})
+        )
+
+        def raise_fingerprint(_request, _tree, _payload, **_kwargs):
+            raise errors.FingerprintMismatch("fingerprint mismatch")
+
+        monkeypatch.setattr(vtn_service, "authenticate_message", raise_fingerprint)
+
+        response = await service.handler(request)
+
+        assert response.status == HTTPStatus.FORBIDDEN
+        assert "fingerprint mismatch" in response.text.lower()
+        service.handle_message.assert_not_called()
+        service.ven_lookup.assert_awaited_once_with(ven_id="ven-123")
+
+    @pytest.mark.asyncio
+    async def test_handler_message_type_oadrResponse(self, monkeypatch):
+        service = MyVTNService(vtn_id="test-vtn")
+        service._create_message = lambda *_args, **_kwargs: "<xml/>"
+        service.handle_message = AsyncMock()
+
+        auth_mock = AsyncMock()
+
+        request = DummyRequest(
+            headers={"content-type": "application/xml"}, body=b"<oadr/>"
+        )
+
+        def mock_parse(_content):
+            return "oadrResponse", {"ven_id": "ven-123"}
+
+        monkeypatch.setattr(
+            vtn_service, "validate_xml_schema", lambda _content: "mocked-tree"
+        )
+        monkeypatch.setattr(vtn_service, "parse_message", mock_parse)
+        monkeypatch.setattr(vtn_service, "authenticate_message", auth_mock)
+
+        response = await service.handler(request)
+
+        assert response.status == HTTPStatus.OK
+        assert response.text == ""
+        service.handle_message.assert_not_called()
+        auth_mock.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_handler_mismatch_vtn_id(self, monkeypatch):
+        service = MyVTNService(vtn_id="expected-vtn")
+        service._create_message = lambda *_args, **_kwargs: "<xml/>"
+        service.handle_message = AsyncMock()
+        service.error_response = Mock(
+            return_value=("oadrError", {"response": {"response_code": 459}})
+        )
+
+        auth_mock = AsyncMock()
+        monkeypatch.setattr(
+            vtn_service, "validate_xml_schema", lambda _content: "mocked-tree"
+        )
+
+        def mock_parse(_content):
+            return "oadrPoll", {
+                "ven_id": "ven-123",
+                "vtn_id": "wrong-vtn",
+            }
+
+        monkeypatch.setattr(vtn_service, "parse_message", mock_parse)
+        monkeypatch.setattr(vtn_service, "authenticate_message", auth_mock)
+
+        request = DummyRequest(headers={"content-type": "application/xml"}, body=b"")
+
+        response = await service.handler(request)
+
+        assert response.status == HTTPStatus.OK
+        assert response.text == "<xml/>"
+        service.handle_message.assert_not_called()
+        auth_mock.assert_not_called()
+        service.error_response.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_handler_ven_lookup_result_is_none(self, monkeypatch):
+        service = MyVTNService(vtn_id="test-vtn")
+        service._create_message = lambda *_args, **_kwargs: "<xml/>"
+        service.handle_message = AsyncMock()
+        service.error_response = Mock(
+            return_value=("oadrError", {"response": {"response_code": 452}})
+        )
+        service.ven_lookup = AsyncMock(return_value=None)
+
+        auth_mock = AsyncMock()
+
+        monkeypatch.setattr(
+            vtn_service, "validate_xml_schema", lambda _content: "mocked-tree"
+        )
+
+        def mock_parse(_content):
+            return "oadrPoll", {"ven_id": "ven-123"}
+
+        monkeypatch.setattr(vtn_service, "parse_message", mock_parse)
+        monkeypatch.setattr(vtn_service, "authenticate_message", auth_mock)
+
+        request = DummyRequest(headers={"content-type": "application/xml"}, body=b"")
+
+        response = await service.handler(request)
+
+        assert response.status == HTTPStatus.OK
+        service.ven_lookup.assert_awaited_once_with(ven_id="ven-123")
+        service.handle_message.assert_not_called()
+        auth_mock.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_handler_ven_lookup_registration_id_is_none(
+        self, monkeypatch
+    ):
+        service = MyVTNService(vtn_id="test-vtn")
+        service._create_message = lambda *_args, **_kwargs: "<xml/>"
+        service.handle_message = AsyncMock()
+        service.error_response = Mock(
+            return_value=("oadrError", {"response": {"response_code": 452}})
+        )
+        service.ven_lookup = AsyncMock(return_value={"registration_id": None})
+
+        auth_mock = AsyncMock()
+
+        monkeypatch.setattr(
+            vtn_service, "validate_xml_schema", lambda _content: "mocked-tree"
+        )
+
+        def mock_parse(_content):
+            return "oadrPoll", {"ven_id": "ven-123"}
+
+        monkeypatch.setattr(vtn_service, "parse_message", mock_parse)
+        monkeypatch.setattr(vtn_service, "authenticate_message", auth_mock)
+
+        request = DummyRequest(headers={"content-type": "application/xml"}, body=b"")
+
+        response = await service.handler(request)
+
+        assert response.status == HTTPStatus.OK
+        service.ven_lookup.assert_awaited_once_with(ven_id="ven-123")
+        service.handle_message.assert_not_called()
+        auth_mock.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_handler_success_oadrQueryRegistration(self, monkeypatch):
+        fingerprint = "AA:BB"
+        service = MyVTNService(vtn_id="test-vtn")
+        service._create_message = lambda *_args, **_kwargs: "<xml/>"
+
+        handle_mock = AsyncMock(
+            return_value=("oadrCreatedPartyRegistration", {"registration_id": "reg-1"})
+        )
+        service.handle_message = handle_mock
+
+        monkeypatch.setattr(
+            vtn_service, "validate_xml_schema", lambda _content: "mocked-tree"
+        )
+
+        def mock_parse(_content):
+            return "oadrQueryRegistration", {
+                "ven_id": "ven-123",
+                "request_id": "1",
+            }
+
+        monkeypatch.setattr(vtn_service, "parse_message", mock_parse)
+        monkeypatch.setattr(
+            vtn_service.myUtils,
+            "get_certificate_fingerprint_from_alb_header",
+            lambda _request: fingerprint,
+        )
+
+        auth_mock = AsyncMock()
+        monkeypatch.setattr(vtn_service, "authenticate_message", auth_mock)
+
+        request = DummyRequest(
+            headers={
+                "content-type": "application/xml",
+                "X-Amzn-Mtls-Clientcert-Leaf": "dummy",
+            },
+            body=b"<oadr/>",
+        )
+
+        response = await service.handler(request)
+
+        assert response.status == HTTPStatus.OK
+        called_payload = handle_mock.await_args.args[1]
+        assert called_payload["fingerprint"] == fingerprint
+        auth_mock.assert_not_called()
+        
+    @pytest.mark.asyncio
+    async def test_handler_success_oadrCreatePartyRegistration(self, monkeypatch):
+        fingerprint = "AA:BB"
+        service = MyVTNService(vtn_id="test-vtn")
+        service._create_message = lambda *_args, **_kwargs: "<xml/>"
+
+        handle_mock = AsyncMock(
+            return_value=("oadrCreatedPartyRegistration", {"registration_id": "reg-1"})
+        )
+        service.handle_message = handle_mock
+
+        monkeypatch.setattr(
+            vtn_service, "validate_xml_schema", lambda _content: "mocked-tree"
+        )
+
+        def mock_parse(_content):
+            return "oadrCreatePartyRegistration", {
+                "ven_id": "ven-123",
+                "request_id": "1",
+            }
+
+        monkeypatch.setattr(vtn_service, "parse_message", mock_parse)
+        monkeypatch.setattr(
+            vtn_service.myUtils,
+            "get_certificate_fingerprint_from_alb_header",
+            lambda _request: fingerprint,
+        )
+
+        auth_mock = AsyncMock()
+        monkeypatch.setattr(vtn_service, "authenticate_message", auth_mock)
+
+        request = DummyRequest(
+            headers={
+                "content-type": "application/xml",
+                "X-Amzn-Mtls-Clientcert-Leaf": "dummy",
+            },
+            body=b"<oadr/>",
+        )
+
+        response = await service.handler(request)
+
+        assert response.status == HTTPStatus.OK
+        called_payload = handle_mock.await_args.args[1]
+        assert called_payload["fingerprint"] == fingerprint
+        auth_mock.assert_not_called()
 
 
-@pytest.fixture
-def app_factory(imports_monkeypatch, monkeypatch):
-    # テスト用にサーバーを起動
-    async def _make_app(vtn_id="vtn_001"):
-        svc = MyVTNService(vtn_id=vtn_id)
+    @pytest.mark.asyncio
+    async def test_handler_success_need_authenticates_ven(self, monkeypatch):
+        service = MyVTNService(vtn_id="test-vtn")
+        service._create_message = lambda *_args, **_kwargs: "<xml/>"
 
-        svc.ven_lookup = ven_lookup
+        handle_mock = AsyncMock(return_value=("oadrResponse", {"result": "ok"}))
+        service.handle_message = handle_mock
 
-        app = web.Application()
-        app.router.add_post("/", svc.handler)
-        return app
+        ven_lookup = AsyncMock(return_value={"registration_id": "reg-1"})
+        service.ven_lookup = ven_lookup
 
-    return _make_app
+        monkeypatch.setattr(
+            vtn_service, "validate_xml_schema", lambda _content: "mocked-tree"
+        )
 
+        def fake_parse(_content):
+            return "oadrPoll", {
+                "ven_id": "ven-123",
+            }
 
-# テスト用のモック関数
-def ven_lookup(ven_id):
-    return ven_id
+        monkeypatch.setattr(vtn_service, "parse_message", fake_parse)
 
+        auth_mock = AsyncMock()
+        monkeypatch.setattr(vtn_service, "authenticate_message", auth_mock)
 
-@pytest.mark.asyncio
-async def test_異常系_ContentTypeの不正(app_factory, aiohttp_client):
-    app = await app_factory()
-    client = await aiohttp_client(app)
+        request = DummyRequest(
+            headers={"content-type": "application/xml"},
+            body=b"<oadr/>",
+        )
 
-    resp = await client.post(
-        "/", data=b"<xml/>", headers={"Content-Type": "text/plain"}
-    )
-    assert resp.status == HTTPStatus.BAD_REQUEST
-    txt = await resp.text()
-    assert "The Content-Type header must be application/xml;" in txt
+        response = await service.handler(request)
 
-
-@pytest.mark.asyncio
-async def test_異常系_oadrResponseを受信(
-    imports_monkeypatch, app_factory, aiohttp_client, monkeypatch
-):
-    # parse_message を oadrResponse に差し替え
-    monkeypatch.setattr(
-        imports_monkeypatch,
-        "parse_message",
-        lambda c: ("oadrResponse", {}),
-        raising=False,
-    )
-
-    app = await app_factory()
-    client = await aiohttp_client(app)
-    resp = await client.post(
-        "/", data=b"<xml/>", headers={"Content-Type": "application/xml"}
-    )
-    assert resp.status == HTTPStatus.OK
-    assert (await resp.text()) == ""
-
-
-@pytest.mark.asyncio
-async def test_異常系_vtnIDが異なる(
-    imports_monkeypatch, app_factory, aiohttp_client, monkeypatch
-):
-    monkeypatch.setattr(
-        imports_monkeypatch,
-        "parse_message",
-        lambda c: ("anyType", {"ven_id": "ven-1", "vtn_id": "OTHER"}),
-        raising=False,
-    )
-
-    app = await app_factory()
-    client = await aiohttp_client(app)
-    resp = await client.post(
-        "/", data=b"<xml/>", headers={"Content-Type": "application/xml"}
-    )
-    txt = await resp.text()
-    # 200 OK（OpenADR メッセージで返す仕様）
-    assert resp.status == HTTPStatus.OK
+        assert response.status == HTTPStatus.OK
+        auth_mock.assert_awaited_once()
+        assert auth_mock.await_args.kwargs["ven_lookup"] is ven_lookup
+        ven_lookup.assert_awaited_once()

@@ -65,10 +65,10 @@ class MyVTNService(VTNService):
                     self.ven_lookup(ven_id=message_payload["ven_id"])
                 )
                 if result is None or result.get("registration_id", None) is None:
-                    raise errors.RequestReregistration(message_payload["ven_id"])
+                    raise errors.NotRegisteredOrAuthorizedError
 
             # Authenticate the message
-            if "ven_id" in message_payload:
+            if message_type not in ("oadrCreatePartyRegistration", "oadrQueryRegistration") and "ven_id" in message_payload:
                 if hasattr(self, "fingerprint_lookup"):
                     await authenticate_message(
                         request,
@@ -120,13 +120,6 @@ class MyVTNService(VTNService):
             response_payload["vtn_id"] = self.vtn_id
             if "ven_id" not in response_payload:
                 response_payload["ven_id"] = message_payload.get("ven_id")
-        except errors.RequestReregistration as err:
-            response_type = "oadrRequestReregistration"
-            response_payload = {"ven_id": err.ven_id}
-            msg = self._create_message(response_type, **response_payload)
-            response = web.Response(
-                text=msg, status=HTTPStatus.OK, content_type="application/xml"
-            )
         except errors.SendEmptyHTTPResponse:
             response = web.Response(
                 text="", status=HTTPStatus.OK, content_type="application/xml"
