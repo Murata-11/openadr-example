@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   openadr-web:
-    build: 
+    build:
       context: .
       dockerfile: dockerfile.web
     container_name: openadr-web
@@ -24,23 +24,6 @@ services:
     command: sleep infinity
     expose:
       - "8080"
-
-  openadr-ven:
-    build:
-      context: .
-      dockerfile: dockerfile.ven
-    container_name: openadr-ven
-    volumes:
-      - ../../ven/:/workspaces
-      - ./web://certs:ro
-    command: sleep infinity
-    depends_on:
-      - openadr-web
-    environment:
-      - VTN_URL=https://openadr-web:443/OpenADR2/Simple/2.0b
-      - CERT_FILE=/certs/dummy_ven.crt
-      - KEY_FILE=/certs/dummy_ven.key
-      - CA_FILE=/certs/dummy_ca.crt
 
   dynamodb:
     image: amazon/dynamodb-local

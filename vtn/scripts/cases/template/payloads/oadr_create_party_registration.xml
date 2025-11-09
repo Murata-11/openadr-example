@@ -1,0 +1,18 @@
+<oadr:oadrPayload xmlns:oadr="http://openadr.org/oadr-2.0b/2012/07">
+  <oadr:oadrSignedObject xmlns:oadr="http://openadr.org/oadr-2.0b/2012/07"
+    oadr:Id="oadrSignedObject">
+    <oadr:oadrCreatePartyRegistration xmlns:ei="http://docs.oasis-open.org/ns/energyinterop/201110"
+      ei:schemaVersion="2.0b">
+      <requestID xmlns="http://docs.oasis-open.org/ns/energyinterop/201110/payloads">
+        2774add6-fc64-4167-9dd1-602ce68639f2</requestID>
+      <ei:venID>123ABC</ei:venID>
+      <oadr:oadrProfileName>2.0b</oadr:oadrProfileName>
+      <oadr:oadrTransportName>simpleHttp</oadr:oadrTransportName>
+      <oadr:oadrTransportAddress>http://localhost</oadr:oadrTransportAddress>
+      <oadr:oadrReportOnly>false</oadr:oadrReportOnly>
+      <oadr:oadrXmlSignature>false</oadr:oadrXmlSignature>
+      <oadr:oadrVenName>test</oadr:oadrVenName>
+      <oadr:oadrHttpPullModel>true</oadr:oadrHttpPullModel>
+    </oadr:oadrCreatePartyRegistration>
+  </oadr:oadrSignedObject>
+</oadr:oadrPayload>
