@@ -1,0 +1,7 @@
+<oadr:oadrPayload xmlns:oadr="http://openadr.org/oadr-2.0b/2012/07">
+  <oadr:oadrSignedObject xmlns:oadr="http://openadr.org/oadr-2.0b/2012/07" oadr:Id="oadrSignedObject">
+    <oadr:oadrPoll xmlns:ei="http://docs.oasis-open.org/ns/energyinterop/201110" ei:schemaVersion="2.0b">
+      <ei:venID>123ABC</ei:venID>
+    </oadr:oadrPoll>
+  </oadr:oadrSignedObject>
+</oadr:oadrPayload>

@@ -1,0 +1,30 @@
+<oadr:oadrPayload xmlns:oadr="http://openadr.org/oadr-2.0b/2012/07">
+  <oadr:oadrSignedObject xmlns:oadr="http://openadr.org/oadr-2.0b/2012/07" oadr:Id="oadrSignedObject">
+    <oadr:oadrRegisterReport xmlns:ei="http://docs.oasis-open.org/ns/energyinterop/201110" ei:schemaVersion="2.0b">
+      <requestID xmlns="http://docs.oasis-open.org/ns/energyinterop/201110/payloads">d37a5398-50f0-45bd-9b19-6b5b6bb61c02</requestID>
+      <oadr:oadrReport xmlns:xcal="urn:ietf:params:xml:ns:icalendar-2.0" xmlns:strm="urn:ietf:params:xml:ns:icalendar-2.0:stream">
+        <oadr:oadrReportDescription xmlns:emix="http://docs.oasis-open.org/ns/emix/2011/06">
+          <ei:rID>08dd7433-2798-4a9f-a030-0a0b5021fdc8</ei:rID>
+          <ei:reportSubject>
+            <ei:resourceID>123ABC</ei:resourceID>
+          </ei:reportSubject>
+          <ei:reportDataSource>
+            <ei:resourceID>123ABC</ei:resourceID>
+          </ei:reportDataSource>
+          <ei:reportType>reading</ei:reportType>
+          <ei:readingType>Direct Read</ei:readingType>
+          <emix:marketContext>http://localhost</emix:marketContext>
+          <oadr:oadrSamplingRate>
+            <oadr:oadrMinPeriod>PT1M</oadr:oadrMinPeriod>
+            <oadr:oadrMaxPeriod>PT1M</oadr:oadrMaxPeriod>
+            <oadr:oadrOnChange>true</oadr:oadrOnChange>
+          </oadr:oadrSamplingRate>
+        </oadr:oadrReportDescription>
+        <ei:reportSpecifierID>96e61860-b171-4ce4-8715-5a47894f59d3</ei:reportSpecifierID>
+        <ei:reportName>METADATA_HISTORY_USAGE</ei:reportName>
+        <ei:createdDateTime>2020-12-03T14:22:07.607003Z</ei:createdDateTime>
+      </oadr:oadrReport>
+      <ei:venID>123ABC</ei:venID>
+    </oadr:oadrRegisterReport>
+  </oadr:oadrSignedObject>
+</oadr:oadrPayload>

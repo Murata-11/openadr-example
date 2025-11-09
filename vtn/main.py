@@ -114,7 +114,7 @@ def ven_lookup(ven_id):
     return {
         "ven_id": "ven_001",
         "ven_name": "ven123",
-        "fingerprint": "53:A4:8E:9C:E0:E1:F5:E4:19:28:2E:20:CB:56:92:D2:FF:CD:18:9A:78:1F:20:11:C9:27:8B:43:3F:4D:4A:CF",
+        "fingerprint": "82:9E:30:9D:F3:58:18:D9:04:BA:09:97:58:0B:FF:24:BA:CD:8B:1B:18:EA:59:AD:56:F4:54:B0:64:B9:38:59",
         "registration_id": "reg_id_123",
     }
 

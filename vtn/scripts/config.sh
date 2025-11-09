@@ -75,3 +75,40 @@ put_item_to_dynamodb() {
   echo "[util] put-item completed successfully"
   echo
 }
+
+
+# --------------------------------------------------
+# ユーティリティ: 引数のレスポンスからreportRequestIDを引き抜き、oadrPendingReportsを作成する
+#   引数1: レスポンスのファイルパス
+# --------------------------------------------------
+build_report_request_ids() {
+  local resp_xml="$1"
+
+  # 名前空間付きの XPath で値だけを取り出す
+  local ids
+  ids="$(xmlstarlet sel \
+    -N ei='http://docs.oasis-open.org/ns/energyinterop/201110' \
+    -t -v '//ei:reportRequestID' -n "$resp_xml")"
+
+  REPORT_REQUEST_IDS_XML=""
+  while IFS= read -r id; do
+    [[ -z "$id" ]] && continue
+    REPORT_REQUEST_IDS_XML+=$'<ei:reportRequestID>'"$id"'</ei:reportRequestID>'
+  done <<< "$ids"
+}
+
+# --------------------------------------------------
+# ユーティリティ: 引数1で受け取ったXMLに環境変数を入力し、新たなXMLを引数2として保存する
+#   引数1: テンプレートXMLファイルのパス
+#   引数2: 出力先のXMLファイルパス
+# --------------------------------------------------
+generate_xml_step() {
+  # REPORT_REQUEST_IDS_XMLを環境変数にエクスポート
+  export REPORT_REQUEST_IDS_XML
+
+  local xml_templ="$1"
+  local xml_gen="$2"
+
+  envsubst < "$xml_templ" > "$xml_gen"
+  echo "generated XML: $xml_gen"
+}
