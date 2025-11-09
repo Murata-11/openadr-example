@@ -25,6 +25,18 @@ services:
     expose:
       - "8080"
 
+  openadr-scripts:
+    build:
+      context: .
+      dockerfile: dockerfile.scripts
+    container_name: openadr-scripts
+    depends_on:
+      - openadr-web
+    volumes:
+      - ../../vtn/scripts:/workspaces/scripts
+      - ./web/:/workspaces/certs
+    command: sleep infinity
+
   dynamodb:
     image: amazon/dynamodb-local
     container_name: openadr-dynamodb-local

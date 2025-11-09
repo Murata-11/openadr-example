@@ -11,24 +11,40 @@
 | -------------------------------------- | --------------------------------------------- | -------------------- |
 | `scripts/config.sh`                    | 証明書パスや VTN エンドポイントなど共通設定。 |                      |
 | `scripts/*.sh`                         | 実行本体。curl でリクエストを連続送信。       |                      |
+| `scripts/cases/<name>/dynamodb/*.json` | DynamoDB に追加するデータの定義。             | 必要に応じて作成     |
 | `scripts/cases/<name>/payloads/*.xml`  | 送信用ペイロード。事前に準備が必要。          | テストケース毎に作成 |
 | `scripts/cases/<name>/responses/*.xml` | 実行後に保存されるレスポンス。                | テストケース毎に作成 |
 
 ## 3. 事前準備
 
-1. VTN サーバーが起動していること。
-2. bash・curl が利用できること（大半の Linux/macOS では標準で可）。
-3. VEN 用クライアント証明書 (`.crt`/`.key`) と CA 証明書を取得済みであること。
-4. 実行するリクエストに対応する送信用ペイロードが作成済みであること。
+1. `/scripts/.devcontainer/devcontainer.json`から開発コンテナに入る（以下はコンテナ上で操作することを想定）。
+2. VTN サーバーが起動していること。
+3. bash・curl が利用できること（大半の Linux/macOS では標準で可）。
+4. VEN 用クライアント証明書 (`.crt`/`.key`) と CA 証明書を取得済みであること。
+5. 実行するリクエストに対応する送信用ペイロードが作成済みであること。
+6. 必要に応じて、DynamoDB に追加するデータの定義が作成済みであること。
+
+### DynamoDB にデータを追加する場合
+
+1. aws の情報を設定する。（DynamoDB ローカルにデータを追加する場合も設定が必要です。）
+   ```bash
+   aws configure
+   # AWS Access Key ID: xxx（ローカルの場合: dummy）
+   # AWS Secret Access Key: xxx（ローカルの場合: dummy）
+   # Default region name: ap-northeast-1 など（ローカルの場合: local）
+   # Default output format:（必要に応じて）
+   ```
 
 ## 4. 設定ファイルの更新 (`config.sh`)
 
-| 変数                         | 説明                                        |
-| ---------------------------- | ------------------------------------------- |
-| `CLIENT_CERT` / `CLIENT_KEY` | VEN 証明書と秘密鍵。                        |
-| `CA_CERT`                    | VTN サーバー検証用 CA。                     |
-| `VTN_ENDPOINT`               | ベース URL。環境ごとに変更。                |
-| `EI_*`                       | 対象エンドポイント。必要に応じて追加/変更。 |
+| 変数                         | 説明                                                  |
+| ---------------------------- | ----------------------------------------------------- |
+| `APP_ENV`                    | 実行環境。ローカルの場合`local`、AWS 上の場合`aws`。  |
+| `CLIENT_CERT` / `CLIENT_KEY` | VEN 証明書と秘密鍵。                                  |
+| `CA_CERT`                    | VTN サーバー検証用 CA。                               |
+| `DYNAMODB_LOCAL_ENDPOINT`    | DynamoDB ローカル の エンドポイント。環境ごとに変更。 |
+| `VTN_ENDPOINT`               | ベース URL。環境ごとに変更。                          |
+| `EI_*`                       | 対象エンドポイント。必要に応じて追加/変更。           |
 
 スクリプト実行時には `confirm_endpoint` 関数が対話的にエンドポイントを再確認するので、意図しない接続を防げる。
 

@@ -13,6 +13,10 @@ COMMON_OPTS=(
   --cacert "$CA_CERT"
 )
 
+# === DynamoDB設定 ===
+DYNAMODB_TABLE_NAME="test-aws-cli"
+DYANAMODB_JSON_PATH="./cases/template/dynamodb/item.json"
+
 # === XMLファイル ===
 XML_STEP1="./cases/template/payloads/oadr_query_registration.xml"
 XML_STEP2="./cases/template/payloads/oadr_create_party_registration.xml"
@@ -47,6 +51,8 @@ step2() {
 
 main() {
   confirm_endpoint
+  # DynamoDBにデータを追加する場合は put_item_to_dynamodb（config.sh）を呼び出す。
+  put_item_to_dynamodb "$DYNAMODB_TABLE_NAME" "$DYANAMODB_JSON_PATH"
   step1
   step2
   echo -e "\n--- done all step ---\n"

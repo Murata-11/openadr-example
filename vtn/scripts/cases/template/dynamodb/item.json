@@ -1,0 +1,12 @@
+{
+  "pk": { "S": "user-2" },
+  "sk":   { "S": "Hanako" },
+  "Age":    { "N": "25" },
+  "Active": { "BOOL": true },
+  "Meta": {
+    "M": {
+      "Role":  { "S": "admin" },
+      "Score": { "N": "100" }
+    }
+  }
+}
