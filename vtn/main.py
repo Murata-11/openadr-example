@@ -4,6 +4,9 @@ import asyncio
 from datetime import datetime, timezone, timedelta
 from functools import partial
 from openleadr import enable_default_logging
+import logging
+
+import openleadr_impl.patch.patch_timedelta
 from openleadr_impl.server import MyOpenADRServer
 
 enable_default_logging()
@@ -156,38 +159,41 @@ async def on_update_report_generic(
 async def on_event_response(ven_id, event_id, opt_type):
     print(f"[EVENT-RESP] ven={ven_id} event={event_id} opt={opt_type}")
 
+def main():
+    server = MyOpenADRServer(
+        vtn_id="myvtn", http_host="0.0.0.0", http_port="8080", ven_lookup=ven_lookup
+    )
+    server.add_handler("on_create_party_registration", on_create_party_registration)
+    server.add_handler("on_register_report", on_register_report)
 
-server = MyOpenADRServer(
-    vtn_id="myvtn", http_host="0.0.0.0", http_port="8080", ven_lookup=ven_lookup
-)
-server.add_handler("on_create_party_registration", on_create_party_registration)
-server.add_handler("on_register_report", on_register_report)
-
-# 起動直後に拾われるイベントを1つ用意（開始=今から60秒後）
-server.add_event(
-    ven_id="ven_001",
-    signal_name="simple",
-    signal_type="level",
-    intervals=[
-        {
-            "dtstart": datetime.now(timezone.utc) + timedelta(seconds=60),
-            "duration": timedelta(minutes=5),
-            "signal_payload": 1,
-        }
-    ],
-    callback=on_event_response,
-)
-
-
-async def debug_headers(request):
-    for k, v in request.headers.items():
-        if k.startswith("X-Amzn-Mtls") or k == "AMZN-MTLS-CLIENT-CERT":
-            print(k, "=", v[:80], "...")
-    return web.Response(text="ok")
+    # 起動直後に拾われるイベントを1つ用意（開始=今から60秒後）
+    server.add_event(
+        ven_id="ven_001",
+        signal_name="simple",
+        signal_type="level",
+        intervals=[
+            {
+                "dtstart": datetime.now(timezone.utc) + timedelta(seconds=60),
+                "duration": timedelta(minutes=5),
+                "signal_payload": 1,
+            }
+        ],
+        callback=on_event_response,
+    )
 
 
-server.app.router.add_get("/debug/headers", debug_headers)
+    async def debug_headers(request):
+        for k, v in request.headers.items():
+            if k.startswith("X-Amzn-Mtls") or k == "AMZN-MTLS-CLIENT-CERT":
+                print(k, "=", v[:80], "...")
+        return web.Response(text="ok")
 
-loop = asyncio.get_event_loop()
-loop.create_task(server.run())
-loop.run_forever()
+
+    server.app.router.add_get("/debug/headers", debug_headers)
+
+    loop = asyncio.get_event_loop()
+    loop.create_task(server.run())
+    loop.run_forever()
+
+if __name__ == "__main__":
+    main()
