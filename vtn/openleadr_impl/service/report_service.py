@@ -1,3 +1,4 @@
+from datetime import timedelta
 from openleadr.service import service, handler
 from asyncio import iscoroutine
 from openleadr import objects, utils
@@ -201,7 +202,7 @@ class ReportService(MyVTNService):
             report_specifier = objects.ReportSpecifier(
                 report_specifier_id=report_specifier_id,
                 granularity=sampling_interval,
-                report_back_duration=report_interval,
+                report_back_duration=timedelta(seconds=0),
                 specifier_payloads=specifier_payloads,
             )
 

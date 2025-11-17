@@ -1,4 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <oadr:oadrPayload xmlns:oadr="http://openadr.org/oadr-2.0b/2012/07">
-<oadr:oadrSignedObject xmlns:oadr="http://openadr.org/oadr-2.0b/2012/07" oadr:Id="oadrSignedObject"><oadr:oadrRegisteredReport ei:schemaVersion="2.0b" xmlns:ei="http://docs.oasis-open.org/ns/energyinterop/201110"><ei:eiResponse><ei:responseCode>200</ei:responseCode><ei:responseDescription>OK</ei:responseDescription><requestID xmlns="http://docs.oasis-open.org/ns/energyinterop/201110/payloads">8a4f859883</requestID></ei:eiResponse><oadr:oadrReportRequest><ei:reportRequestID>7ca73f06-50e6-45da-ac58-22a4d871d8d3</ei:reportRequestID><ei:reportSpecifier xmlns:xcal="urn:ietf:params:xml:ns:icalendar-2.0"><ei:reportSpecifierID>789ed6cd4e_telemetry_status</ei:reportSpecifierID><xcal:granularity><xcal:duration>PT1M</xcal:duration></xcal:granularity><ei:reportBackDuration><xcal:duration>PT1M</xcal:duration></ei:reportBackDuration><ei:specifierPayload><ei:rID>1aed6a1f-f8c9-4fc1-9de1-1a0c5e1cd67a</ei:rID><ei:readingType>x-notApplicable</ei:readingType></ei:specifierPayload></ei:reportSpecifier></oadr:oadrReportRequest><oadr:oadrReportRequest><ei:reportRequestID>9497044b-9895-4d71-b5be-4fde332f4d1a</ei:reportRequestID><ei:reportSpecifier xmlns:xcal="urn:ietf:params:xml:ns:icalendar-2.0"><ei:reportSpecifierID>789ed6cd4e_telemetry_usage</ei:reportSpecifierID><xcal:granularity><xcal:duration>PT1M</xcal:duration></xcal:granularity><ei:reportBackDuration><xcal:duration>PT1M</xcal:duration></ei:reportBackDuration><ei:specifierPayload><ei:rID>resource1_energy</ei:rID><ei:readingType>Direct Read</ei:readingType></ei:specifierPayload><ei:specifierPayload><ei:rID>resource1_power</ei:rID><ei:readingType>Direct Read</ei:readingType></ei:specifierPayload></ei:reportSpecifier></oadr:oadrReportRequest>    <ei:venID>s3cc244ee6</ei:venID></oadr:oadrRegisteredReport></oadr:oadrSignedObject>
+    <oadr:oadrSignedObject xmlns:oadr="http://openadr.org/oadr-2.0b/2012/07"
+        oadr:Id="oadrSignedObject">
+        <oadr:oadrRegisteredReport ei:schemaVersion="2.0b"
+            xmlns:ei="http://docs.oasis-open.org/ns/energyinterop/201110">
+            <ei:eiResponse>
+                <ei:responseCode>200</ei:responseCode>
+                <ei:responseDescription>OK</ei:responseDescription>
+                <requestID xmlns="http://docs.oasis-open.org/ns/energyinterop/201110/payloads">
+                    8a4f859883</requestID>
+            </ei:eiResponse>
+            <oadr:oadrReportRequest>
+                <ei:reportRequestID>6be629c7-efd5-43fd-86d8-cd074b0f7535</ei:reportRequestID>
+                <ei:reportSpecifier xmlns:xcal="urn:ietf:params:xml:ns:icalendar-2.0">
+                    <ei:reportSpecifierID>789ed6cd4e_telemetry_status</ei:reportSpecifierID>
+                    <xcal:granularity>
+                        <xcal:duration>PT1M</xcal:duration>
+                    </xcal:granularity>
+                    <ei:reportBackDuration>
+                        <xcal:duration>PT0S</xcal:duration>
+                    </ei:reportBackDuration>
+                    <ei:specifierPayload>
+                        <ei:rID>1aed6a1f-f8c9-4fc1-9de1-1a0c5e1cd67a</ei:rID>
+                        <ei:readingType>x-notApplicable</ei:readingType>
+                    </ei:specifierPayload>
+                </ei:reportSpecifier>
+            </oadr:oadrReportRequest>
+            <oadr:oadrReportRequest>
+                <ei:reportRequestID>8964c662-e9ce-4f62-9b11-ff5c30749fcc</ei:reportRequestID>
+                <ei:reportSpecifier xmlns:xcal="urn:ietf:params:xml:ns:icalendar-2.0">
+                    <ei:reportSpecifierID>789ed6cd4e_telemetry_usage</ei:reportSpecifierID>
+                    <xcal:granularity>
+                        <xcal:duration>PT1M</xcal:duration>
+                    </xcal:granularity>
+                    <ei:reportBackDuration>
+                        <xcal:duration>PT0S</xcal:duration>
+                    </ei:reportBackDuration>
+                    <ei:specifierPayload>
+                        <ei:rID>resource1_energy</ei:rID>
+                        <ei:readingType>Direct Read</ei:readingType>
+                    </ei:specifierPayload>
+                    <ei:specifierPayload>
+                        <ei:rID>resource1_power</ei:rID>
+                        <ei:readingType>Direct Read</ei:readingType>
+                    </ei:specifierPayload>
+                </ei:reportSpecifier>
+            </oadr:oadrReportRequest>
+            <ei:venID>s3cc244ee6</ei:venID>
+        </oadr:oadrRegisteredReport>
+    </oadr:oadrSignedObject>
 </oadr:oadrPayload>

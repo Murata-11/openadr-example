@@ -10,8 +10,7 @@
           1bb8cdc4-5d02-4bf1-b78b-6d09db5c55f7</requestID>
       </ei:eiResponse>
       <oadr:oadrPendingReports>
-        <ei:reportRequestID>7ca73f06-50e6-45da-ac58-22a4d871d8d3</ei:reportRequestID>
-        <ei:reportRequestID>9497044b-9895-4d71-b5be-4fde332f4d1a</ei:reportRequestID>
+        <ei:reportRequestID>6be629c7-efd5-43fd-86d8-cd074b0f7535</ei:reportRequestID><ei:reportRequestID>8964c662-e9ce-4f62-9b11-ff5c30749fcc</ei:reportRequestID>
       </oadr:oadrPendingReports>
       <ei:venID>123ABC</ei:venID>
     </oadr:oadrCreatedReport>
